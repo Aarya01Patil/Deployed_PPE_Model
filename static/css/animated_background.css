@@ -1,0 +1,30 @@
+:root {
+    --color-a: #00204a;
+    --color-b: #908ee7;
+    --color-c: #00bbf0;
+    transition: background-color 2s ease;
+  }
+  
+  .animated-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: linear-gradient(69deg, var(--color-a), var(--color-b), var(--color-c));
+    background-size: 400% 400%;
+    animation: gradient 25s ease infinite;
+  }
+  
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Upload - PPE Detection System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-upload"></i> Upload an Image or Video
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data" id="upload-form">
+            <div class="mb-3">
+                <label for="file" class="form-label">Choose an image or video file:</label>
+                <input class="form-control" type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.mp4,.avi,.mov">
+            </div>
+            <button type="submit" class="btn btn-primary" id="submit-btn">
+                <i class="fas fa-upload"></i> Upload and Process
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('upload-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const fileInput = document.getElementById('file');
+
+    form.addEventListener('submit', function(e) {
+        const file = fileInput.files[0];
+        if (file) {
+            const validExtensions = ['.png', '.jpg', '.jpeg', '.mp4', '.avi', '.mov'];
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (validExtensions.includes(fileExtension)) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait, processing...';
+                submitBtn.disabled = true;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

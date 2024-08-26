@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Result - PPE Detection System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-check-circle"></i> Processed Result
+    </div>
+    <div class="card-body">
+        {% if result_file.endswith('.mp4') or result_file.endswith('.avi') or result_file.endswith('.mov') %}
+        <div class="ratio ratio-16x9 mb-3">
+            <video controls>
+                <source src="{{ url_for('processed_file', filename=result_file) }}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        {% else %}
+        <img src="{{ url_for('processed_file', filename=result_file) }}" alt="Processed Image" class="img-fluid mb-3">
+        {% endif %}
+        <div class="d-grid gap-2">
+            <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
