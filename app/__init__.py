@@ -7,6 +7,8 @@ app.secret_key = 'bffhjehiofepe;rowoiiouYROPK'
 
 def clear_folder(folder_name):
     folder_path = os.path.join(app.static_folder, folder_name)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
         try:

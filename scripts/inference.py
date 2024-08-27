@@ -5,8 +5,9 @@ from ultralytics import YOLO
 import os
 import subprocess
 
-person_model = YOLO('weights/person_detection/best.pt')
-ppe_model = YOLO('weights/ppe_detection/best.pt')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+person_model = YOLO('weights/person_detection/best.pt').to(device)
+ppe_model = YOLO('weights/ppe_detection/best.pt').to(device)
 
 def draw_boxes(img, boxes, labels, scores):
     class_colors = {
@@ -108,7 +109,7 @@ def process_video(input_path, output_path):
                 break
             
             frame_count += 1
-            if frame_count % 10 == 0:  
+            if frame_count % 10 == 0: 
                 logging.info(f"Processing frame {frame_count}/{total_frames}")
             
             processed_frame = process_frame(frame)

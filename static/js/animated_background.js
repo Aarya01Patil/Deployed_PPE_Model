@@ -1,6 +1,6 @@
 const feelingColorMap = {
     1: ["#00204a", "#9896f1", "#00bbf0"],
-    2: ["#edf756", "#ffa8B6", "#0049B7"], // A warm gradient with red, orange, and yellow
+    2: ["#edf756", "#ffa8B6", "#0049B7"], 
     3: ["#e5eaf5", "#12343b", "#7d3cff"] 
   };
   
