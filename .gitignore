@@ -1,0 +1,7 @@
+demo.bat
+.env
+directory_structure.txt
+venv
+scripts\__pycache__
+app\__pycache__
+__pycache__

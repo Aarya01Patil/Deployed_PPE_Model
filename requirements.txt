@@ -1,7 +1,7 @@
-numpy
-Flask
-gunicorn
+flask
+boto3
 opencv-python-headless
 ultralytics
-opencv-python
-boto3
+torch
+torchvision
+gunicorn

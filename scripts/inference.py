@@ -4,10 +4,24 @@ import torch
 from ultralytics import YOLO
 import os
 import subprocess
+from functools import lru_cache
+
+logging.basicConfig(level=logging.INFO)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-person_model = YOLO('weights/person_detection/best.pt').to(device)
-ppe_model = YOLO('weights/ppe_detection/best.pt').to(device)
+
+@lru_cache(maxsize=None)
+def load_person_model():
+    return YOLO('weights/person_detection/best.pt').to(device)
+
+@lru_cache(maxsize=None)
+def load_ppe_model():
+    return YOLO('weights/ppe_detection/best.pt').to(device)
+
+def unload_models():
+    load_person_model.cache_clear()
+    load_ppe_model.cache_clear()
+    torch.cuda.empty_cache()
 
 def draw_boxes(img, boxes, labels, scores):
     class_colors = {
@@ -35,6 +49,8 @@ def draw_boxes(img, boxes, labels, scores):
         cv2.putText(img, label_text, (x1, y1 - 5), font, font_scale, (0, 0, 0), thickness)
 
 def process_frame(frame):
+    person_model = load_person_model()
+    ppe_model = load_ppe_model()
 
     person_results = person_model(frame)[0]
 
@@ -74,12 +90,12 @@ def process_image(input_path, output_path):
     image = cv2.imread(input_path)
     if image is None or image.size == 0:
         raise ValueError("Failed to load the image or image is empty")
-    print(f"Input image shape: {image.shape}")
+    logging.info(f"Input image shape: {image.shape}")
 
     processed_image = process_frame(image)
 
     cv2.imwrite(output_path, processed_image)
-    print(f"Processed image saved to: {output_path}")
+    logging.info(f"Processed image saved to: {output_path}")
     return output_path
 
 def process_video(input_path, output_path):
@@ -103,17 +119,25 @@ def process_video(input_path, output_path):
             raise ValueError(f"Unable to create output video file: {temp_output_path}")
 
         frame_count = 0
+        chunk_size = 100  # Process 100 frames at a time
         while True:
-            ret, frame = video.read()
-            if not ret:
+            frames = []
+            for _ in range(chunk_size):
+                ret, frame = video.read()
+                if not ret:
+                    break
+                frames.append(frame)
+            
+            if not frames:
                 break
-            
-            frame_count += 1
-            if frame_count % 10 == 0: 
-                logging.info(f"Processing frame {frame_count}/{total_frames}")
-            
-            processed_frame = process_frame(frame)
-            out.write(processed_frame)
+
+            for frame in frames:
+                frame_count += 1
+                if frame_count % 10 == 0: 
+                    logging.info(f"Processing frame {frame_count}/{total_frames}")
+                
+                processed_frame = process_frame(frame)
+                out.write(processed_frame)
 
         video.release()
         out.release()
@@ -153,7 +177,6 @@ def reencode_video(input_path, output_path):
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to re-encode video: {str(e)}")
         raise
-
 
 def perform_inference(input_path, output_path):
     if input_path.lower().endswith(('.png', '.jpg', '.jpeg')):

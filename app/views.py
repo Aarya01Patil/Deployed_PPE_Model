@@ -3,15 +3,19 @@ import boto3
 from botocore.exceptions import ClientError
 from flask import render_template, request, redirect, url_for, flash, session
 from app import app
-from scripts.inference import perform_inference
+from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
 import threading
-import boto3
+import logging
 from botocore.config import Config
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
+# S3 configuration
 s3_config = Config(
     signature_version='s3v4',
-    region_name='eu-north-1'  
+    region_name=os.environ.get('AWS_REGION', 'eu-north-1')
 )
 
 s3_client = boto3.client(
@@ -20,10 +24,10 @@ s3_client = boto3.client(
     aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
     config=s3_config
 )
-BUCKET_NAME = 'ppedetectionbucket'  
+BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ppedetectionbucket')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov'}
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -33,19 +37,16 @@ def upload_file_to_s3(file, filename):
         s3_client.upload_fileobj(file, BUCKET_NAME, filename)
         return True
     except ClientError as e:
-        print(f"Error uploading to S3: {e}")
-        if e.response['Error']['Code'] == 'InvalidRequest':
-            print("Please check your AWS credentials and region settings.")
+        logging.error(f"Error uploading to S3: {e}")
         return False
 
 def download_file_from_s3(filename, local_path):
     try:
-        s3_client.download_file(BUCKET_NAME, filename, local_path)
+        with open(local_path, 'wb') as f:
+            s3_client.download_fileobj(BUCKET_NAME, filename, f)
         return True
     except ClientError as e:
-        print(f"Error downloading from S3: {e}")
-        if e.response['Error']['Code'] == 'InvalidRequest':
-            print("Please check your AWS credentials and region settings.")
+        logging.error(f"Error downloading from S3: {e}")
         return False
 
 def process_file_async(input_filename, output_filename):
@@ -61,13 +62,14 @@ def process_file_async(input_filename, output_filename):
         else:
             session['processing_status'] = 'error'
     except Exception as e:
-        print(f"Error processing {input_filename}: {e}")
+        logging.error(f"Error processing {input_filename}: {e}")
         session['processing_status'] = 'error'
     finally:
         if os.path.exists(local_input_path):
             os.remove(local_input_path)
         if os.path.exists(local_output_path):
             os.remove(local_output_path)
+        unload_models()  # Unload models after processing
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
@@ -101,10 +103,10 @@ def show_result(filename):
             url = s3_client.generate_presigned_url('get_object',
                                                    Params={'Bucket': BUCKET_NAME,
                                                            'Key': filename},
-                                                   ExpiresIn=3600)  
+                                                   ExpiresIn=3600)
             return render_template('result.html', result_url=url, processing_status=processing_status)
         except ClientError as e:
-            print(f"Error generating presigned URL: {e}")
+            logging.error(f"Error generating presigned URL: {e}")
             processing_status = 'error'
     
     return render_template('result.html', processing_status=processing_status)

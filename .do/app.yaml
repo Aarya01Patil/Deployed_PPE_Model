@@ -1,0 +1,19 @@
+name: ppe-detection-app
+services:
+  - name: web
+    github:
+      repo: Aarya01Patil/Deployed_PPE_Model
+      branch: main
+    envs:
+      - key: AWS_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: AWS_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: S3_BUCKET_NAME
+        scope: RUN_TIME
+        type: SECRET
+      - key: AWS_REGION
+        scope: RUN_TIME
+        value: eu-north-1
