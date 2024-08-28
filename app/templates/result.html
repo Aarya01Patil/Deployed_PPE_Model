@@ -8,19 +8,27 @@
         <i class="fas fa-check-circle"></i> Processed Result
     </div>
     <div class="card-body">
-        {% if result_file.endswith('.mp4') or result_file.endswith('.avi') or result_file.endswith('.mov') %}
-        <div class="ratio ratio-16x9 mb-3">
-            <video controls>
-                <source src="{{ url_for('processed_file', filename=result_file) }}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        </div>
+        {% if result_url %}
+            {% if result_url.lower().endswith('.mp4') or result_url.lower().endswith('.avi') or result_url.lower().endswith('.mov') %}
+            <div class="ratio ratio-16x9 mb-3">
+                <video controls>
+                    <source src="{{ result_url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            {% else %}
+            <img src="{{ result_url }}" alt="Processed Image" class="img-fluid mb-3">
+            {% endif %}
+            <div class="d-grid gap-2">
+                <a href="{{ result_url }}" class="btn btn-secondary mb-2" download><i class="fas fa-download"></i> Download Processed File</a>
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
+            </div>
         {% else %}
-        <img src="{{ url_for('processed_file', filename=result_file) }}" alt="Processed Image" class="img-fluid mb-3">
+            <p class="alert alert-warning">No processed file available. The file may still be processing or an error occurred.</p>
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Return to Upload</a>
+            </div>
         {% endif %}
-        <div class="d-grid gap-2">
-            <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
-        </div>
     </div>
 </div>
 {% endblock %}
