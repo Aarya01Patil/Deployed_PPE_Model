@@ -4,3 +4,4 @@ gunicorn
 opencv-python-headless
 ultralytics
 opencv-python
+boto3

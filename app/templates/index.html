@@ -10,8 +10,15 @@
     <div class="card-body">
         <form method="post" enctype="multipart/form-data" id="upload-form">
             <div class="mb-3">
-                <label for="file" class="form-label">Choose an image or video file:</label>
-                <input class="form-control" type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.mp4,.avi,.mov">
+                <div id="drop-area" class="p-4 border border-2 border-dashed rounded">
+                    <p class="text-center mb-2">Drag & drop files here</p>
+                    <p class="text-center">or</p>
+                    <label for="file" class="form-label d-block text-center">
+                        <span class="btn btn-secondary">Choose an image or video file</span>
+                        <input class="d-none" type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.mp4,.avi,.mov">
+                    </label>
+                </div>
+                <p class="text-muted mt-2">Accepted formats: .png, .jpg, .jpeg, .mp4, .avi, .mov</p>
             </div>
             <button type="submit" class="btn btn-primary" id="submit-btn">
                 <i class="fas fa-upload"></i> Upload and Process
@@ -27,6 +34,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('upload-form');
     const submitBtn = document.getElementById('submit-btn');
     const fileInput = document.getElementById('file');
+    const dropArea = document.getElementById('drop-area');
+
+    // Prevent default drag behaviors
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+
+    // Highlight drop area when item is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    // Handle dropped files
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    function highlight(e) {
+        dropArea.classList.add('bg-light');
+    }
+
+    function unhighlight(e) {
+        dropArea.classList.remove('bg-light');
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        handleFiles(files);
+    }
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            fileInput.files = files;
+            form.dispatchEvent(new Event('submit'));
+        }
+    }
 
     form.addEventListener('submit', function(e) {
         const file = fileInput.files[0];
@@ -37,6 +90,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (validExtensions.includes(fileExtension)) {
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait, processing...';
                 submitBtn.disabled = true;
+            } else {
+                e.preventDefault();
+                alert('Invalid file type. Please use .png, .jpg, .jpeg, .mp4, .avi, or .mov files.');
             }
         }
     });
