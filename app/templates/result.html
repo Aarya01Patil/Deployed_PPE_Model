@@ -8,7 +8,7 @@
         <i class="fas fa-check-circle"></i> Processed Result
     </div>
     <div class="card-body">
-        {% if result_url %}
+        {% if processing_status == 'completed' and result_url %}
             {% if result_url.lower().endswith('.mp4') or result_url.lower().endswith('.avi') or result_url.lower().endswith('.mov') %}
             <div class="ratio ratio-16x9 mb-3">
                 <video controls>
@@ -23,8 +23,13 @@
                 <a href="{{ result_url }}" class="btn btn-secondary mb-2" download><i class="fas fa-download"></i> Download Processed File</a>
                 <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
             </div>
+        {% elif processing_status == 'processing' %}
+            <p class="alert alert-info">Your file is still being processed. Please wait or check back later.</p>
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('show_result', filename=request.view_args['filename']) }}" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh</a>
+            </div>
         {% else %}
-            <p class="alert alert-warning">No processed file available. The file may still be processing or an error occurred.</p>
+            <p class="alert alert-danger">An error occurred while processing your file. Please try uploading it again.</p>
             <div class="d-grid gap-2">
                 <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Return to Upload</a>
             </div>
