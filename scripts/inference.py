@@ -119,7 +119,7 @@ def process_video(input_path, output_path):
             raise ValueError(f"Unable to create output video file: {temp_output_path}")
 
         frame_count = 0
-        chunk_size = 100  # Process 100 frames at a time
+        chunk_size = 100  
         while True:
             frames = []
             for _ in range(chunk_size):

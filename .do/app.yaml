@@ -1,23 +1,44 @@
 name: ppe-detection-app
 services:
-- name: web
-  github:
-    branch: main
-    deploy_on_push: true
-    repo: Aarya01Patil/Deployed_PPE_Model
-  build_command: pip install -r requirements.txt
-  run_command: gunicorn run:app
-  envs:
-  - key: AWS_ACCESS_KEY_ID
-    scope: RUN_TIME
-    value: SECRET
-  - key: AWS_SECRET_ACCESS_KEY
-    scope: RUN_TIME
-    value: SECRET
-  - key: S3_BUCKET_NAME
-    scope: RUN_TIME
-    value: SECRET
-  - key: AWS_REGION
-    scope: RUN_TIME
-    value: eu-north-1
-  initial_deployment_strategy: MINIMAL
+  - name: web
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: Aarya01Patil/Deployed_PPE_Model
+    build_command: pip install -r requirements.txt
+    run_command: gunicorn run:app
+    envs:
+      - key: AWS_ACCESS_KEY_ID
+        scope: RUN_TIME
+        value: SECRET
+      - key: AWS_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        value: SECRET
+      - key: S3_BUCKET_NAME
+        scope: RUN_TIME
+        value: SECRET
+      - key: AWS_REGION
+        scope: RUN_TIME
+        value: eu-north-1
+
+  - name: worker
+    github:
+      repo: Aarya01Patil/Deployed_PPE_Model
+      branch: main
+    build_command: pip install -r requirements.txt
+    run_command: python scripts/s3_cleanup.py
+    envs:
+      - key: AWS_ACCESS_KEY_ID
+        scope: RUN_TIME
+        value: SECRET
+      - key: AWS_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        value: SECRET
+      - key: S3_BUCKET_NAME
+        scope: RUN_TIME
+        value: SECRET
+      - key: AWS_REGION
+        scope: RUN_TIME
+        value: eu-north-1
+
+initial_deployment_strategy: MINIMAL

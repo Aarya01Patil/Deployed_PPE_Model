@@ -9,10 +9,8 @@ import threading
 import logging
 from botocore.config import Config
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 
-# S3 configuration
 s3_config = Config(
     signature_version='s3v4',
     region_name=os.environ.get('AWS_REGION', 'eu-north-1')
@@ -69,7 +67,7 @@ def process_file_async(input_filename, output_filename):
             os.remove(local_input_path)
         if os.path.exists(local_output_path):
             os.remove(local_output_path)
-        unload_models()  # Unload models after processing
+        unload_models()  
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
@@ -100,13 +98,26 @@ def show_result(filename):
     
     if processing_status == 'completed':
         try:
-            url = s3_client.generate_presigned_url('get_object',
-                                                   Params={'Bucket': BUCKET_NAME,
-                                                           'Key': filename},
-                                                   ExpiresIn=3600)
-            return render_template('result.html', result_url=url, processing_status=processing_status)
+            presigned_url = s3_client.generate_presigned_url('get_object',
+                                                             Params={'Bucket': BUCKET_NAME,
+                                                                     'Key': filename},
+                                                             ExpiresIn=3600)
+            file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
+            return render_template('result.html', presigned_url=presigned_url, processing_status=processing_status, file_type=file_type)
         except ClientError as e:
             logging.error(f"Error generating presigned URL: {e}")
             processing_status = 'error'
     
     return render_template('result.html', processing_status=processing_status)
+
+def generate_presigned_url(bucket_name, object_name, expiration=3600):
+    try:
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': bucket_name,
+                                                            'Key': object_name},
+                                                    ExpiresIn=expiration)
+    except ClientError as e:
+        logging.error(e)
+        return None
+    
+    return response
