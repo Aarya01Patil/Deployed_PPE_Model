@@ -25,7 +25,7 @@ s3_client = boto3.client(
 BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ppedetectionbucket')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov'}
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 
 processing_status_dict = {}
 
@@ -101,27 +101,8 @@ def show_result(filename):
     processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
-        try:
-            presigned_url = s3_client.generate_presigned_url('get_object',
-                                                             Params={'Bucket': BUCKET_NAME,
-                                                                     'Key': filename},
-                                                             ExpiresIn=3600)
-            file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
-            return render_template('result.html', presigned_url=presigned_url, processing_status=processing_status, file_type=file_type)
-        except ClientError as e:
-            logging.error(f"Error generating presigned URL: {e}")
-            processing_status = 'error'
+        direct_url = f"https://{BUCKET_NAME}.s3.{os.environ.get('AWS_REGION', 'eu-north-1')}.amazonaws.com/{filename}"
+        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
+        return render_template('result.html', direct_url=direct_url, processing_status=processing_status, file_type=file_type)
     
     return render_template('result.html', processing_status=processing_status)
-
-def generate_presigned_url(bucket_name, object_name, expiration=3600):
-    try:
-        response = s3_client.generate_presigned_url('get_object',
-                                                    Params={'Bucket': bucket_name,
-                                                            'Key': object_name},
-                                                    ExpiresIn=expiration)
-    except ClientError as e:
-        logging.error(e)
-        return None
-    
-    return response
