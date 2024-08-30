@@ -3,7 +3,6 @@ import cv2
 import torch
 from ultralytics import YOLO
 import os
-import subprocess
 from functools import lru_cache
 
 logging.basicConfig(level=logging.INFO)
@@ -111,33 +110,34 @@ def process_video(input_path, output_path):
         
         logging.info(f"Video properties: {width}x{height} at {fps} fps, {total_frames} frames")
 
+        # Reduce resolution
+        new_width = 640
+        new_height = int(height * (new_width / width))
+
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        temp_output_path = output_path.replace('.mp4', '_temp.mp4')
-        out = cv2.VideoWriter(temp_output_path, fourcc, fps, (width, height))
+        out = cv2.VideoWriter(output_path, fourcc, fps, (new_width, new_height))
         
         if not out.isOpened():
-            raise ValueError(f"Unable to create output video file: {temp_output_path}")
+            raise ValueError(f"Unable to create output video file: {output_path}")
 
         frame_count = 0
-        chunk_size = 100  
         while True:
-            frames = []
-            for _ in range(chunk_size):
-                ret, frame = video.read()
-                if not ret:
-                    break
-                frames.append(frame)
-            
-            if not frames:
+            ret, frame = video.read()
+            if not ret:
                 break
+            
+            frame_count += 1
+            if frame_count % 5 != 0:  # Process every 5th frame
+                continue
+            
+            # Resize frame
+            frame = cv2.resize(frame, (new_width, new_height))
+            
+            processed_frame = process_frame(frame)
+            out.write(processed_frame)
 
-            for frame in frames:
-                frame_count += 1
-                if frame_count % 10 == 0: 
-                    logging.info(f"Processing frame {frame_count}/{total_frames}")
-                
-                processed_frame = process_frame(frame)
-                out.write(processed_frame)
+            if frame_count % 50 == 0:
+                logging.info(f"Processed frame {frame_count}/{total_frames}")
 
         video.release()
         out.release()
@@ -145,37 +145,11 @@ def process_video(input_path, output_path):
         if frame_count == 0:
             raise ValueError("No frames were processed from the input video")
 
-        reencode_video(temp_output_path, output_path)
-
-        if os.path.exists(temp_output_path):
-            os.remove(temp_output_path)
-
-        if not os.path.exists(output_path):
-            raise ValueError(f"Output video file was not created: {output_path}")
-
-        output_size = os.path.getsize(output_path)
-        if output_size == 0:
-            raise ValueError(f"Output video file is empty: {output_path}")
-
         logging.info(f"Processed video saved to: {output_path}")
         logging.info(f"Processed {frame_count} frames")
-        logging.info(f"Output video size: {output_size} bytes")
 
     except Exception as e:
         logging.error(f"Error processing video: {str(e)}")
-        raise
-
-def reencode_video(input_path, output_path):
-    try:
-        command = [
-            'ffmpeg', '-i', input_path,
-            '-vcodec', 'h264', '-acodec', 'aac',
-            output_path
-        ]
-        subprocess.run(command, check=True)
-        logging.info(f"Re-encoded video saved to: {output_path}")
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to re-encode video: {str(e)}")
         raise
 
 def perform_inference(input_path, output_path):

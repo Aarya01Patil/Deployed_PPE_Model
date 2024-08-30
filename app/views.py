@@ -104,5 +104,8 @@ def show_result(filename):
         direct_url = f"https://{BUCKET_NAME}.s3.eu-north-1.amazonaws.com/{filename}"
         file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
         return render_template('result.html', direct_url=direct_url, processing_status=processing_status, file_type=file_type)
+    elif processing_status == 'error':
+        flash('An error occurred while processing the file', 'error')
+        return redirect(url_for('upload_file'))
     
     return render_template('result.html', processing_status=processing_status)
