@@ -1,7 +1,7 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash
 from app import app
 from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
@@ -27,6 +27,8 @@ BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ppedetectionbucket')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov'}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB limit
 
+processing_status_dict = {}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -47,7 +49,7 @@ def download_file_from_s3(filename, local_path):
         logging.error(f"Error downloading from S3: {e}")
         return False
 
-def process_file_async(input_filename, output_filename):
+def process_file_async(input_filename, output_filename, session_id):
     local_input_path = f"/tmp/{input_filename}"
     local_output_path = f"/tmp/{output_filename}"
     
@@ -56,18 +58,18 @@ def process_file_async(input_filename, output_filename):
             perform_inference(local_input_path, local_output_path)
             with open(local_output_path, 'rb') as f:
                 upload_file_to_s3(f, output_filename)
-            session['processing_status'] = 'completed'
+            processing_status_dict[session_id] = 'completed'
         else:
-            session['processing_status'] = 'error'
+            processing_status_dict[session_id] = 'error'
     except Exception as e:
         logging.error(f"Error processing {input_filename}: {e}")
-        session['processing_status'] = 'error'
+        processing_status_dict[session_id] = 'error'
     finally:
         if os.path.exists(local_input_path):
             os.remove(local_input_path)
         if os.path.exists(local_output_path):
             os.remove(local_output_path)
-        unload_models()  
+        unload_models()
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
@@ -83,10 +85,11 @@ def upload_file():
             filename = secure_filename(file.filename)
             if upload_file_to_s3(file, filename):
                 output_filename = f"processed_{filename}"
-                session['processing_status'] = 'processing'
-                threading.Thread(target=process_file_async, args=(filename, output_filename)).start()
+                session_id = request.cookies.get('session_id', filename)
+                processing_status_dict[session_id] = 'processing'
+                threading.Thread(target=process_file_async, args=(filename, output_filename, session_id)).start()
                 flash('File uploaded successfully. Processing...', 'success')
-                return redirect(url_for('show_result', filename=output_filename))
+                return redirect(url_for('show_result', filename=output_filename, session_id=session_id))
             else:
                 flash('Error uploading file', 'error')
                 return redirect(request.url)
@@ -94,7 +97,8 @@ def upload_file():
 
 @app.route('/result/<filename>')
 def show_result(filename):
-    processing_status = session.get('processing_status', 'processing')
+    session_id = request.args.get('session_id', filename)
+    processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
         try:
