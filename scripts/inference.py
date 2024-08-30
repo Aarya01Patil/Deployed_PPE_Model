@@ -127,10 +127,9 @@ def process_video(input_path, output_path):
                 break
             
             frame_count += 1
-            if frame_count % 5 != 0:  # Process every 5th frame
+            if frame_count % 3 != 0: 
                 continue
             
-            # Resize frame
             frame = cv2.resize(frame, (new_width, new_height))
             
             processed_frame = process_frame(frame)

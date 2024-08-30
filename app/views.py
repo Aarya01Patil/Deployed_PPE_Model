@@ -1,7 +1,7 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, send_file, url_for, flash
 from app import app
 from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
@@ -31,6 +31,17 @@ processing_status_dict = {}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def generate_presigned_url(bucket_name, object_name, expiration=3600):
+    try:
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': bucket_name,
+                                                            'Key': object_name},
+                                                    ExpiresIn=expiration)
+    except ClientError as e:
+        logging.error(e)
+        return None
+    return response
 
 def upload_file_to_s3(file, filename):
     try:
@@ -101,11 +112,30 @@ def show_result(filename):
     processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
-        direct_url = f"https://{BUCKET_NAME}.s3.eu-north-1.amazonaws.com/{filename}"
+        presigned_url = generate_presigned_url(BUCKET_NAME, filename)
+        if presigned_url is None:
+            flash('Error generating pre-signed URL', 'error')
+            return redirect(url_for('upload_file'))
+        
         file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
-        return render_template('result.html', direct_url=direct_url, processing_status=processing_status, file_type=file_type)
+        return render_template('result.html', presigned_url=presigned_url, processing_status=processing_status, file_type=file_type)
     elif processing_status == 'error':
         flash('An error occurred while processing the file', 'error')
         return redirect(url_for('upload_file'))
     
     return render_template('result.html', processing_status=processing_status)
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    try:
+        file = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
+        return send_file(
+            file['Body'],
+            as_attachment=True,
+            attachment_filename=filename,
+            mimetype='video/mp4' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image/jpeg'
+        )
+    except ClientError as e:
+        logging.error(e)
+        flash('Error downloading file', 'error')
+        return redirect(url_for('upload_file'))
