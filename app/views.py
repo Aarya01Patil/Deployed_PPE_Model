@@ -101,7 +101,7 @@ def show_result(filename):
     processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
-        direct_url = f"https://{BUCKET_NAME}.s3.{os.environ.get('AWS_REGION', 'eu-north-1')}.amazonaws.com/{filename}"
+        direct_url = f"https://{BUCKET_NAME}.s3.eu-north-1.amazonaws.com/{filename}"
         file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
         return render_template('result.html', direct_url=direct_url, processing_status=processing_status, file_type=file_type)
     

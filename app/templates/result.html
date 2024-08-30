@@ -23,12 +23,12 @@
                 <a href="{{ direct_url }}" class="btn btn-secondary mb-2" download><i class="fas fa-download"></i> Download Processed File</a>
                 <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
             </div>
-            {% elif processing_status == 'processing' %}
+        {% elif processing_status == 'processing' %}
             <p class="alert alert-info">Your file is still being processed. Please wait or check back later.</p>
             <div class="d-grid gap-2">
                 <a href="{{ url_for('show_result', filename=request.view_args['filename']) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh</a>
             </div>
-            {% endif %}
+        {% else %}
             <p class="alert alert-danger">An error occurred while processing your file. Please try uploading it again.</p>
             <div class="d-grid gap-2">
                 <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Return to Upload</a>
