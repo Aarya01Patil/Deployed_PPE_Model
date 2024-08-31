@@ -1,7 +1,7 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-from flask import render_template, request, redirect, send_file, send_from_directory, url_for, flash
+from flask import render_template, request, redirect, send_file, url_for, flash
 from app import app
 from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
@@ -32,6 +32,17 @@ processing_status_dict = {}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def generate_presigned_url(bucket_name, object_name, expiration=3600):
+    try:
+        response = s3_client.generate_presigned_url('get_object',
+                                                    Params={'Bucket': bucket_name,
+                                                            'Key': object_name},
+                                                    ExpiresIn=expiration)
+    except ClientError as e:
+        logging.error(e)
+        return None
+    return response
+
 def upload_file_to_s3(file, filename):
     try:
         s3_client.upload_fileobj(file, BUCKET_NAME, filename)
@@ -56,6 +67,8 @@ def process_file_async(input_filename, output_filename, session_id):
     try:
         if download_file_from_s3(input_filename, local_input_path):
             perform_inference(local_input_path, local_output_path)
+            with open(local_output_path, 'rb') as f:
+                upload_file_to_s3(f, output_filename)
             processing_status_dict[session_id] = 'completed'
         else:
             processing_status_dict[session_id] = 'error'
@@ -65,6 +78,8 @@ def process_file_async(input_filename, output_filename, session_id):
     finally:
         if os.path.exists(local_input_path):
             os.remove(local_input_path)
+        if os.path.exists(local_output_path):
+            os.remove(local_output_path)
         unload_models()
 
 @app.route('/', methods=['GET', 'POST'])
@@ -97,19 +112,30 @@ def show_result(filename):
     processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
-        file_path = os.path.join('/tmp', filename) 
-        if os.path.exists(file_path):
-            file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
-            return render_template('result.html', filename=filename, processing_status=processing_status, file_type=file_type)
-        else:
-            flash('File not found', 'error')
+        presigned_url = generate_presigned_url(BUCKET_NAME, filename)
+        if presigned_url is None:
+            flash('Error generating pre-signed URL', 'error')
             return redirect(url_for('upload_file'))
+        
+        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
+        return render_template('result.html', presigned_url=presigned_url, processing_status=processing_status, file_type=file_type)
     elif processing_status == 'error':
         flash('An error occurred while processing the file', 'error')
         return redirect(url_for('upload_file'))
     
-    return render_template('result.html', processing_status=processing_status, filename=filename)
+    return render_template('result.html', processing_status=processing_status)
 
-@app.route('/files/<filename>')
-def serve_file(filename):
-    return send_from_directory('/tmp', filename)
+@app.route('/download/<filename>')
+def download_file(filename):
+    try:
+        file = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
+        return send_file(
+            file['Body'],
+            as_attachment=True,
+            attachment_filename=filename,
+            mimetype='video/mp4' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image/jpeg'
+        )
+    except ClientError as e:
+        logging.error(e)
+        flash('Error downloading file', 'error')
+        return redirect(url_for('upload_file'))

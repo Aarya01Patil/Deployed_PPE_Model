@@ -4,14 +4,10 @@ import torch
 from ultralytics import YOLO
 import os
 from functools import lru_cache
-import imageio_ffmpeg as ffmpeg
 
 logging.basicConfig(level=logging.INFO)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-ffmpeg_binary = ffmpeg.get_ffmpeg_version()
-os.environ["PATH"] += os.pathsep + '/usr/local/bin'
 
 @lru_cache(maxsize=None)
 def load_person_model():
@@ -101,24 +97,11 @@ def process_image(input_path, output_path):
     logging.info(f"Processed image saved to: {output_path}")
     return output_path
 
-def convert_video(input_path, output_path):
-    try:
-        stream = ffmpeg.input(input_path)
-        stream = ffmpeg.output(stream, output_path, vcodec='libx264', acodec='aac', format='mp4')
-        ffmpeg.run(stream)
-        logging.info(f"Video converted to MP4 format and saved to: {output_path}")
-    except ffmpeg.Error as e:
-        logging.error(f"Error converting video: {str(e)}")
-        raise
-
 def process_video(input_path, output_path):
     try:
-        converted_path = input_path[:-4] + '_converted.mp4'
-        convert_video(input_path, converted_path)
-        
-        video = cv2.VideoCapture(converted_path)
+        video = cv2.VideoCapture(input_path)
         if not video.isOpened():
-            raise ValueError(f"Unable to open video file: {converted_path}")
+            raise ValueError(f"Unable to open video file: {input_path}")
 
         fps = video.get(cv2.CAP_PROP_FPS)
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
