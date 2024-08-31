@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 ffmpeg_binary = ffmpeg.get_ffmpeg_version()
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_binary)
+os.environ["PATH"] += os.pathsep + '/usr/local/bin'
 
 @lru_cache(maxsize=None)
 def load_person_model():
