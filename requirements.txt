@@ -6,3 +6,4 @@ torch
 torchvision
 gunicorn
 ffmpeg-python
+ffmpeg
