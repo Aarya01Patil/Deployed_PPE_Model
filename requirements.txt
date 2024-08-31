@@ -7,3 +7,4 @@ torchvision
 gunicorn
 ffmpeg-python
 ffmpeg
+imageio-ffmpeg

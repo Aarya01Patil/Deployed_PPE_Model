@@ -4,11 +4,14 @@ import torch
 from ultralytics import YOLO
 import os
 from functools import lru_cache
-import ffmpeg  # Import ffmpeg
+import imageio_ffmpeg as ffmpeg
 
 logging.basicConfig(level=logging.INFO)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+ffmpeg_binary = ffmpeg.get_ffmpeg_version()
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_binary)
 
 @lru_cache(maxsize=None)
 def load_person_model():
