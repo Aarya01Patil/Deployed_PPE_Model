@@ -8,22 +8,14 @@
         <i class="fas fa-check-circle"></i> Processed Result
     </div>
     <div class="card-body">
-        <p>Debug Info:</p>
-        <ul>
-            <li>Filename: {{ filename }}</li>
-            <li>Processing Status: {{ processing_status }}</li>
-            <li>File Type: {{ file_type if file_type else 'Unknown' }}</li>
-        </ul>
-        
         {% if processing_status == 'completed' and filename %}
             {% if file_type == 'video' %}
             <div class="ratio ratio-16x9 mb-3">
-                <video controls preload="auto" playsinline>
+                <video controls preload="metadata" playsinline>
                     <source src="{{ url_for('serve_file', filename=filename) }}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
-            <p>Video URL: {{ url_for('serve_file', filename=filename) }}</p>
             {% else %}
             <img src="{{ url_for('serve_file', filename=filename) }}" alt="Processed Image" class="img-fluid mb-3">
             {% endif %}

@@ -1,7 +1,7 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-from flask import Response, render_template, request, redirect, send_file, send_from_directory, url_for, flash 
+from flask import render_template, request, redirect, send_file, send_from_directory, url_for, flash
 from app import app
 from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
@@ -67,27 +67,44 @@ def process_file_async(input_filename, output_filename, session_id):
             os.remove(local_input_path)
         unload_models()
 
+@app.route('/', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part', 'error')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash('No selected file', 'error')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            if upload_file_to_s3(file, filename):
+                output_filename = f"processed_{filename}"
+                session_id = request.cookies.get('session_id', filename)
+                processing_status_dict[session_id] = 'processing'
+                threading.Thread(target=process_file_async, args=(filename, output_filename, session_id)).start()
+                flash('File uploaded successfully. Processing...', 'success')
+                return redirect(url_for('show_result', filename=output_filename, session_id=session_id))
+            else:
+                flash('Error uploading file', 'error')
+                return redirect(request.url)
+    return render_template('index.html')
+
 @app.route('/result/<filename>')
 def show_result(filename):
     session_id = request.args.get('session_id', filename)
     processing_status = processing_status_dict.get(session_id, 'processing')
     
-    logging.debug(f"Showing result for file: {filename}")
-    logging.debug(f"Processing status: {processing_status}")
-    
     if processing_status == 'completed':
-        file_path = os.path.join('/tmp', filename)
-        logging.debug(f"Checking file path: {file_path}")
+        file_path = os.path.join('/tmp', filename) 
         if os.path.exists(file_path):
-            logging.debug(f"File exists: {file_path}")
             file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
             return render_template('result.html', filename=filename, processing_status=processing_status, file_type=file_type)
         else:
-            logging.error(f"File not found: {file_path}")
             flash('File not found', 'error')
             return redirect(url_for('upload_file'))
     elif processing_status == 'error':
-        logging.error(f"Processing error for file: {filename}")
         flash('An error occurred while processing the file', 'error')
         return redirect(url_for('upload_file'))
     
@@ -95,31 +112,4 @@ def show_result(filename):
 
 @app.route('/files/<filename>')
 def serve_file(filename):
-    logging.debug(f"Attempting to serve file: {filename}")
-    file_path = os.path.join('/tmp', filename)
-    if os.path.exists(file_path):
-        file_size = os.path.getsize(file_path)
-        range_header = request.headers.get('Range')
-        if range_header:
-            byte1, byte2 = 0, None
-            match = re.search(r'(\d+)-(\d*)', range_header)
-            if match:
-                groups = match.groups()
-                if groups[0]:
-                    byte1 = int(groups[0])
-                if groups[1]:
-                    byte2 = int(groups[1])
-            byte2 = byte2 if byte2 else file_size - 1
-            length = byte2 - byte1 + 1
-            with open(file_path, 'rb') as f:
-                f.seek(byte1)
-                data = f.read(length)
-            rv = Response(data, 206, mimetype='video/mp4',
-                          content_type='video/mp4', direct_passthrough=True)
-            rv.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{file_size}')
-            return rv
-        else:
-            return send_from_directory('/tmp', filename, mimetype='video/mp4')
-    else:
-        logging.error(f"File not found: {file_path}")
-        return "File not found", 404
+    return send_from_directory('/tmp', filename)
