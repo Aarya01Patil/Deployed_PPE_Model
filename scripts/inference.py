@@ -4,6 +4,7 @@ import torch
 from ultralytics import YOLO
 import os
 from functools import lru_cache
+import ffmpeg 
 
 logging.basicConfig(level=logging.INFO)
 
@@ -85,23 +86,24 @@ def process_frame(frame):
 
     return frame
 
-def process_image(input_path, output_path):
-    image = cv2.imread(input_path)
-    if image is None or image.size == 0:
-        raise ValueError("Failed to load the image or image is empty")
-    logging.info(f"Input image shape: {image.shape}")
-
-    processed_image = process_frame(image)
-
-    cv2.imwrite(output_path, processed_image)
-    logging.info(f"Processed image saved to: {output_path}")
-    return output_path
+def convert_video(input_path, output_path):
+    try:
+        stream = ffmpeg.input(input_path)
+        stream = ffmpeg.output(stream, output_path, vcodec='libx264', acodec='aac', format='mp4')
+        ffmpeg.run(stream)
+        logging.info(f"Video converted to MP4 format and saved to: {output_path}")
+    except ffmpeg.Error as e:
+        logging.error(f"Error converting video: {str(e)}")
+        raise
 
 def process_video(input_path, output_path):
     try:
-        video = cv2.VideoCapture(input_path)
+        converted_path = input_path[:-4] + '_converted.mp4'
+        convert_video(input_path, converted_path)
+        
+        video = cv2.VideoCapture(converted_path)
         if not video.isOpened():
-            raise ValueError(f"Unable to open video file: {input_path}")
+            raise ValueError(f"Unable to open video file: {converted_path}")
 
         fps = video.get(cv2.CAP_PROP_FPS)
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -110,7 +112,6 @@ def process_video(input_path, output_path):
         
         logging.info(f"Video properties: {width}x{height} at {fps} fps, {total_frames} frames")
 
-        # Reduce resolution
         new_width = 640
         new_height = int(height * (new_width / width))
 
@@ -153,7 +154,7 @@ def process_video(input_path, output_path):
 
 def perform_inference(input_path, output_path):
     if input_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-        process_image(input_path, output_path)
+        process_frame(input_path, output_path)
     elif input_path.lower().endswith(('.mp4', '.avi', '.mov')):
         process_video(input_path, output_path)
     else:

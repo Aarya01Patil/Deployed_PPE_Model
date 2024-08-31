@@ -5,3 +5,4 @@ ultralytics
 torch
 torchvision
 gunicorn
+ffmpeg-python
