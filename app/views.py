@@ -76,7 +76,6 @@ def process_file_async(input_filename, output_filename, session_id):
         if download_file_from_s3(input_filename, local_input_path):
             perform_inference(local_input_path, local_output_path)
             
-            # Check if the output file exists and has content
             if os.path.exists(local_output_path) and os.path.getsize(local_output_path) > 0:
                 with open(local_output_path, 'rb') as f:
                     s3_client.upload_fileobj(

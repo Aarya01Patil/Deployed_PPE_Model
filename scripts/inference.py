@@ -1,4 +1,5 @@
 import logging
+import subprocess
 import cv2
 import torch
 from ultralytics import YOLO
@@ -110,15 +111,15 @@ def process_video(input_path, output_path):
         
         logging.info(f"Video properties: {width}x{height} at {fps} fps, {total_frames} frames")
 
-        # Reduce resolution
         new_width = 640
         new_height = int(height * (new_width / width))
 
+        temp_output = output_path + '.temp.mp4'
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_path, fourcc, fps, (new_width, new_height))
+        out = cv2.VideoWriter(temp_output, fourcc, fps, (new_width, new_height))
         
         if not out.isOpened():
-            raise ValueError(f"Unable to create output video file: {output_path}")
+            raise ValueError(f"Unable to create output video file: {temp_output}")
 
         frame_count = 0
         while True:
@@ -143,6 +144,22 @@ def process_video(input_path, output_path):
 
         if frame_count == 0:
             raise ValueError("No frames were processed from the input video")
+
+        # Re-encode the video using FFmpeg
+        ffmpeg_command = [
+            'ffmpeg',
+            '-i', temp_output,
+            '-c:v', 'libx264',
+            '-preset', 'medium',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', '+faststart',
+            output_path
+        ]
+        
+        subprocess.run(ffmpeg_command, check=True)
+        os.remove(temp_output)
 
         logging.info(f"Processed video saved to: {output_path}")
         logging.info(f"Processed {frame_count} frames")
