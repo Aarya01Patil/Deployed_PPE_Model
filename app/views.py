@@ -47,7 +47,13 @@ def generate_presigned_url(bucket_name, object_name, expiration=3600):
 
 def upload_file_to_s3(file, filename):
     try:
-        s3_client.upload_fileobj(file, BUCKET_NAME, filename)
+        content_type = 'video/mp4' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image/jpeg'
+        s3_client.upload_fileobj(
+            file, 
+            BUCKET_NAME, 
+            filename,
+            ExtraArgs={'ContentType': content_type}
+        )
         return True
     except ClientError as e:
         logging.error(f"Error uploading to S3: {e}")
@@ -144,20 +150,51 @@ def download_file(filename):
 def stream_file(filename):
     try:
         file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
-        headers = {
-            'Content-Disposition': f'inline; filename="{filename}"',
-            'Content-Type': 'video/mp4',
-            'Accept-Ranges': 'bytes',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-        return Response(
-            file_obj['Body'].iter_chunks(chunk_size=8192),
-            headers=headers,
-            status=200,
-            mimetype='video/mp4'
-        )
+        file_size = int(file_obj['ContentLength'])
+
+        range_header = request.headers.get('Range', None)
+        if range_header:
+            byte1, byte2 = 0, None
+            match = re.search(r'(\d+)-(\d*)', range_header)
+            groups = match.groups()
+
+            if groups[0]: byte1 = int(groups[0])
+            if groups[1]: byte2 = int(groups[1])
+
+            if byte2 is None:
+                byte2 = file_size - 1
+            else:
+                byte2 = min(byte2, file_size - 1)
+
+            length = byte2 - byte1 + 1
+
+            file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename, Range=f'bytes={byte1}-{byte2}')
+
+            resp = Response(
+                file_obj['Body'].iter_chunks(chunk_size=8192),
+                status=206,
+                mimetype='video/mp4',
+                content_type='video/mp4',
+                direct_passthrough=True,
+            )
+            resp.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{file_size}')
+            resp.headers.add('Accept-Ranges', 'bytes')
+            resp.headers.add('Content-Length', str(length))
+        else:
+            resp = Response(
+                file_obj['Body'].iter_chunks(chunk_size=8192),
+                status=200,
+                mimetype='video/mp4',
+                content_type='video/mp4',
+                direct_passthrough=True,
+            )
+            resp.headers.add('Content-Length', str(file_size))
+
+        resp.headers.add('Content-Disposition', f'inline; filename="{filename}"')
+        resp.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
+        resp.headers.add('Pragma', 'no-cache')
+        resp.headers.add('Expires', '0')
+        return resp
     except ClientError as e:
         logging.error(e)
         return Response(status=404)

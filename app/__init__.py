@@ -5,7 +5,7 @@ from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../static', template_folder='templates')
 app.secret_key = 'bffhjehiofepe;rowoiiouYROPK'
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*", "expose_headers": "ETag", "methods": ["GET", "HEAD", "OPTIONS"], "max_age": 3000}})
 
 def clear_folder(folder_name):
     folder_path = os.path.join(app.static_folder, folder_name)

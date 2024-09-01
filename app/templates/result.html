@@ -16,32 +16,42 @@
     <div class="card-body">
         {% if processing_status == 'completed' and video_url %}
             {% if file_type == 'video' %}
-            <div class="ratio ratio-16x9 mb-3">
-                <video
-                    id="my-video"
-                    class="video-js"
-                    controls
-                    preload="auto"
-                    width="640"
-                    height="360"
-                    data-setup="{}"
-                >
-                    <source src="{{ video_url }}" type="video/mp4">
-                    <p class="vjs-no-js">
-                        To view this video please enable JavaScript, and consider upgrading to a
-                        web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
-                    </p>
-                </video>
-            </div>
-            <script>
-                var player = videojs('my-video', {
-                    controls: true,
-                    autoplay: false,
-                    preload: 'auto',
-                    responsive: true,
-                    fluid: true
-                });
-            </script>
+            <video
+            id="my-video"
+            class="video-js vjs-default-skin vjs-big-play-centered"
+            controls
+            preload="auto"
+            width="640"
+            height="360"
+            data-setup='{"fluid": true, "playbackRates": [0.5, 1, 1.5, 2]}'
+        >
+            <source src="{{ video_url }}" type="video/mp4">
+            <source src="{{ video_url }}" type="video/webm">
+            <source src="{{ video_url }}" type="video/ogg">
+        </video>
+        
+        <script>
+            var player = videojs('my-video', {
+                controls: true,
+                autoplay: false,
+                preload: 'auto',
+                responsive: true,
+                fluid: true,
+                playbackRates: [0.5, 1, 1.5, 2],
+                html5: {
+                    hls: {
+                        overrideNative: true
+                    },
+                    nativeVideoTracks: false,
+                    nativeAudioTracks: false,
+                    nativeTextTracks: false
+                }
+            });
+        
+            player.on('error', function() {
+                console.error('Video.js error:', player.error());
+            });
+        </script>
             {% else %}
             <img src="{{ video_url }}" alt="Processed Image" class="img-fluid mb-3">
             {% endif %}
