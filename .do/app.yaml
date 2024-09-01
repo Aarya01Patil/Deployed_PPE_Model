@@ -20,6 +20,20 @@ services:
       - key: AWS_REGION
         scope: RUN_TIME
         value: eu-north-1
+        http_port: 8080
+    routes:
+      - path: /
+    headers:
+      - name: Access-Control-Allow-Origin
+        value: "*"
+      - name: Access-Control-Allow-Methods
+        value: "GET, HEAD, OPTIONS"
+      - name: Access-Control-Allow-Headers
+        value: "*"
+      - name: Access-Control-Expose-Headers
+        value: "ETag"
+      - name: Access-Control-Max-Age
+        value: "3000"
 
   - name: worker
     github:

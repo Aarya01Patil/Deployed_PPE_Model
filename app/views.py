@@ -9,6 +9,7 @@ import threading
 import logging
 from botocore.config import Config
 from io import BytesIO
+from flask_cors import cross_origin
 
 logging.basicConfig(level=logging.INFO)
 
@@ -107,28 +108,28 @@ def upload_file():
                 return redirect(request.url)
     return render_template('index.html')
 
-@app.route('/result/<filename>')
-def show_result(filename):
-    session_id = request.args.get('session_id', filename)
-    processing_status = processing_status_dict.get(session_id, 'processing')
-    
-    if processing_status == 'completed':
-        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
-        if file_type == 'video':
-            video_url = url_for('stream_file', filename=filename)
-        else:
-            video_url = generate_presigned_url(BUCKET_NAME, filename)
-        
-        if video_url is None:
-            flash('Error generating URL for the file', 'error')
-            return redirect(url_for('upload_file'))
-        
-        return render_template('result.html', video_url=video_url, processing_status=processing_status, file_type=file_type, filename=filename)
-    elif processing_status == 'error':
-        flash('An error occurred while processing the file', 'error')
-        return redirect(url_for('upload_file'))
-    
-    return render_template('result.html', processing_status=processing_status, filename=filename)
+@app.route('/stream/<filename>')
+@cross_origin()
+def stream_file(filename):
+    try:
+        file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
+        headers = {
+            'Content-Disposition': f'inline; filename="{filename}"',
+            'Content-Type': 'video/mp4',
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+        return Response(
+            file_obj['Body'].iter_chunks(chunk_size=8192),
+            headers=headers,
+            status=200,
+            mimetype='video/mp4'
+        )
+    except ClientError as e:
+        logging.error(e)
+        return Response(status=404)
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -146,24 +147,23 @@ def download_file(filename):
         return redirect(url_for('upload_file'))
     
 @app.route('/stream/<filename>')
+@cross_origin()
 def stream_file(filename):
-    def generate():
-        try:
-            file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
-            buffer = BytesIO(file_obj['Body'].read())
-            while True:
-                chunk = buffer.read(8192)
-                if not chunk:
-                    break
-                yield chunk
-        except ClientError as e:
-            logging.error(e)
-            yield b''
-
-    headers = {
-        'Content-Disposition': f'inline; filename="{filename}"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-    }
-    return Response(generate(), mimetype='video/mp4', headers=headers)
+    try:
+        file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
+        headers = {
+            'Content-Disposition': f'inline; filename="{filename}"',
+            'Content-Type': 'video/mp4',
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        }
+        return Response(
+            file_obj['Body'].iter_chunks(chunk_size=8192),
+            headers=headers,
+            status=200,
+            mimetype='video/mp4'
+        )
+    except ClientError as e:
+        logging.error(e)

@@ -1,9 +1,11 @@
 import os
 import shutil
 from flask import Flask
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../static', template_folder='templates')
 app.secret_key = 'bffhjehiofepe;rowoiiouYROPK'
+CORS(app)
 
 def clear_folder(folder_name):
     folder_path = os.path.join(app.static_folder, folder_name)
