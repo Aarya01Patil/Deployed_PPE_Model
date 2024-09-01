@@ -108,28 +108,21 @@ def upload_file():
                 return redirect(request.url)
     return render_template('index.html')
 
-@app.route('/stream/<filename>')
-@cross_origin()
-def stream_file(filename):
-    try:
-        file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
-        headers = {
-            'Content-Disposition': f'inline; filename="{filename}"',
-            'Content-Type': 'video/mp4',
-            'Accept-Ranges': 'bytes',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        }
-        return Response(
-            file_obj['Body'].iter_chunks(chunk_size=8192),
-            headers=headers,
-            status=200,
-            mimetype='video/mp4'
-        )
-    except ClientError as e:
-        logging.error(e)
-        return Response(status=404)
+@app.route('/result/<filename>')
+def show_result(filename):
+    session_id = request.args.get('session_id', filename)
+    processing_status = processing_status_dict.get(session_id, 'processing')
+    
+    if processing_status == 'completed':
+        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
+        video_url = url_for('stream_file', filename=filename, _external=True)
+        
+        return render_template('result.html', video_url=video_url, processing_status=processing_status, file_type=file_type, filename=filename)
+    elif processing_status == 'error':
+        flash('An error occurred while processing the file', 'error')
+        return redirect(url_for('upload_file'))
+    
+    return render_template('result.html', processing_status=processing_status, filename=filename)
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -167,3 +160,4 @@ def stream_file(filename):
         )
     except ClientError as e:
         logging.error(e)
+        return Response(status=404)
