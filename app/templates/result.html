@@ -8,25 +8,25 @@
         <i class="fas fa-check-circle"></i> Processed Result
     </div>
     <div class="card-body">
-        {% if processing_status == 'completed' and presigned_url %}
+        {% if processing_status == 'completed' and video_url %}
             {% if file_type == 'video' %}
             <div class="ratio ratio-16x9 mb-3">
                 <video controls>
-                    <source src="{{ presigned_url }}" type="video/mp4">
+                    <source src="{{ video_url }}" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
             </div>
             {% else %}
-            <img src="{{ presigned_url }}" alt="Processed Image" class="img-fluid mb-3">
+            <img src="{{ video_url }}" alt="Processed Image" class="img-fluid mb-3">
             {% endif %}
             <div class="d-grid gap-2">
-                <a href="{{ url_for('download_file', filename=request.view_args['filename']) }}" class="btn btn-secondary mb-2"><i class="fas fa-download"></i> Download Processed File</a>
+                <a href="{{ url_for('download_file', filename=filename) }}" class="btn btn-secondary mb-2"><i class="fas fa-download"></i> Download Processed File</a>
                 <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
             </div>
         {% elif processing_status == 'processing' %}
             <p class="alert alert-info">Your file is still being processed. Please wait or check back later.</p>
             <div class="d-grid gap-2">
-                <a href="{{ url_for('show_result', filename=request.view_args['filename']) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh</a>
+                <a href="{{ url_for('show_result', filename=filename) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh</a>
             </div>
         {% else %}
             <p class="alert alert-danger">An error occurred while processing your file. Please try uploading it again.</p>

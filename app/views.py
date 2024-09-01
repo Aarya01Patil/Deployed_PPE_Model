@@ -1,13 +1,14 @@
 import os
 import boto3
 from botocore.exceptions import ClientError
-from flask import render_template, request, redirect, send_file, url_for, flash
+from flask import render_template, request, redirect, send_file, url_for, flash , Response
 from app import app
 from scripts.inference import perform_inference, unload_models
 from werkzeug.utils import secure_filename
 import threading
 import logging
 from botocore.config import Config
+from io import BytesIO
 
 logging.basicConfig(level=logging.INFO)
 
@@ -112,18 +113,22 @@ def show_result(filename):
     processing_status = processing_status_dict.get(session_id, 'processing')
     
     if processing_status == 'completed':
-        presigned_url = generate_presigned_url(BUCKET_NAME, filename)
-        if presigned_url is None:
-            flash('Error generating pre-signed URL', 'error')
+        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
+        if file_type == 'video':
+            video_url = url_for('stream_file', filename=filename)
+        else:
+            video_url = generate_presigned_url(BUCKET_NAME, filename)
+        
+        if video_url is None:
+            flash('Error generating URL for the file', 'error')
             return redirect(url_for('upload_file'))
         
-        file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
-        return render_template('result.html', presigned_url=presigned_url, processing_status=processing_status, file_type=file_type)
+        return render_template('result.html', video_url=video_url, processing_status=processing_status, file_type=file_type, filename=filename)
     elif processing_status == 'error':
         flash('An error occurred while processing the file', 'error')
         return redirect(url_for('upload_file'))
     
-    return render_template('result.html', processing_status=processing_status)
+    return render_template('result.html', processing_status=processing_status, filename=filename)
 
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -139,3 +144,26 @@ def download_file(filename):
         logging.error(e)
         flash('Error downloading file', 'error')
         return redirect(url_for('upload_file'))
+    
+@app.route('/stream/<filename>')
+def stream_file(filename):
+    def generate():
+        try:
+            file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
+            buffer = BytesIO(file_obj['Body'].read())
+            while True:
+                chunk = buffer.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+        except ClientError as e:
+            logging.error(e)
+            yield b''
+
+    headers = {
+        'Content-Disposition': f'inline; filename="{filename}"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    }
+    return Response(generate(), mimetype='video/mp4', headers=headers)
