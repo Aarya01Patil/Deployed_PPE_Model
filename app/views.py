@@ -75,9 +75,21 @@ def process_file_async(input_filename, output_filename, session_id):
     try:
         if download_file_from_s3(input_filename, local_input_path):
             perform_inference(local_input_path, local_output_path)
-            with open(local_output_path, 'rb') as f:
-                upload_file_to_s3(f, output_filename)
-            processing_status_dict[session_id] = 'completed'
+            
+            # Check if the output file exists and has content
+            if os.path.exists(local_output_path) and os.path.getsize(local_output_path) > 0:
+                with open(local_output_path, 'rb') as f:
+                    s3_client.upload_fileobj(
+                        f, 
+                        BUCKET_NAME, 
+                        output_filename,
+                        ExtraArgs={'ContentType': 'video/mp4'}
+                    )
+                logging.info(f"Successfully uploaded processed file {output_filename} to S3")
+                processing_status_dict[session_id] = 'completed'
+            else:
+                logging.error(f"Processed file {local_output_path} is empty or does not exist")
+                processing_status_dict[session_id] = 'error'
         else:
             processing_status_dict[session_id] = 'error'
     except Exception as e:
@@ -135,13 +147,13 @@ def download_file(filename):
     try:
         file = s3_client.get_object(Bucket=BUCKET_NAME, Key=filename)
         return send_file(
-            file['Body'],
+            BytesIO(file['Body'].read()),
+            download_name=filename,  
             as_attachment=True,
-            attachment_filename=filename,
             mimetype='video/mp4' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image/jpeg'
         )
     except ClientError as e:
-        logging.error(e)
+        logging.error(f"Error downloading file {filename}: {e}")
         flash('Error downloading file', 'error')
         return redirect(url_for('upload_file'))
     
