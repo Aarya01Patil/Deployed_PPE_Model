@@ -6,3 +6,5 @@ torch
 torchvision
 gunicorn
 flask-cors
+ffmpeg-python
+moviepy
