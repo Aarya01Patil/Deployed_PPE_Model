@@ -1,11 +1,10 @@
 import os
 import shutil
-import secrets
 from flask import Flask
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder='../static', template_folder='templates')
-app.secret_key = secrets.token_hex(16)
+app.secret_key = 'bffhjehiofepe;rowoiiouYROPK'
 CORS(app, resources={r"/*": {"origins": "*", "expose_headers": "ETag", "methods": ["GET", "HEAD", "OPTIONS"], "max_age": 3000}})
 
 def clear_folder(folder_name):
@@ -22,7 +21,13 @@ def clear_folder(folder_name):
         except Exception as e:
             print(f'Failed to delete {file_path}. Reason: {e}')
 
-for folder in ['results', 'uploads']:
-    clear_folder(folder)
+def clear_results_folder():
+    clear_folder('results')
+
+def clear_uploads_folder():
+    clear_folder('uploads')
+
+clear_results_folder()
+clear_uploads_folder()
 
 from app import views

@@ -36,9 +36,6 @@
                             </div>
                         </div>
                         <p class="text-muted fst-italic mb-3 small">Accepted formats: .png, .jpg, .jpeg, .mp4, .avi, .mov</p>
-                        <button type="submit" class="btn btn-primary btn-lg w-100" id="submit-btn">
-                            Upload and Process
-                        </button>
                     </form>
                 </div>
             </div>
@@ -82,13 +79,9 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('upload-form');
-    const submitBtn = document.getElementById('submit-btn');
-    const fileInput = document.getElementById('file');
     const dropArea = document.getElementById('drop-area');
-    const resultArea = document.getElementById('result-area');
-    const processing = document.getElementById('processing');
-    const resultContent = document.getElementById('result-content');
+    const fileInput = document.getElementById('file');
+    const form = document.getElementById('upload-form');
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
@@ -126,56 +119,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleFiles(files) {
         if (files.length > 0) {
-            fileInput.files = files;
-            form.dispatchEvent(new Event('submit'));
+            processFile(files[0]);
         }
     }
 
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const file = fileInput.files[0];
-        if (file) {
-            const validExtensions = ['.png', '.jpg', '.jpeg', '.mp4', '.avi', '.mov'];
-            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-            
-            if (validExtensions.includes(fileExtension)) {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-                submitBtn.disabled = true;
-                resultArea.classList.remove('d-none');
-                processing.classList.remove('d-none');
-                resultContent.classList.add('d-none');
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                fetch('/process', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    processing.classList.add('d-none');
-                    resultContent.classList.remove('d-none');
-                    if (data.success) {
-                        resultContent.innerHTML = `<img src="${data.result_url}" alt="Processed Image" class="img-fluid">`;
-                    } else {
-                        resultContent.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
-                    }
-                })
-                .catch(error => {
-                    processing.classList.add('d-none');
-                    resultContent.classList.remove('d-none');
-                    resultContent.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
-                })
-                .finally(() => {
-                    submitBtn.innerHTML = 'Upload and Process';
-                    submitBtn.disabled = false;
-                });
-            } else {
-                alert('Invalid file type. Please use .png, .jpg, .jpeg, .mp4, .avi, or .mov files.');
-            }
-        }
+    fileInput.addEventListener('change', function(e) {
+        handleFiles(this.files);
     });
+
+    function processFile(file) {
+        const validExtensions = ['.png', '.jpg', '.jpeg', '.mp4', '.avi', '.mov'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (validExtensions.includes(fileExtension)) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
+        } else {
+            alert('Invalid file type. Please use .png, .jpg, .jpeg, .mp4, .avi, or .mov files.');
+        }
+    }
 });
 </script>
 {% endblock %}

@@ -9,67 +9,79 @@
 {% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <i class="fas fa-check-circle"></i> Processed Result
-    </div>
-    <div class="card-body">
-        {% if processing_status == 'completed' and video_url %}
-            {% if file_type == 'video' %}
-            <video
-            id="my-video"
-            class="video-js vjs-default-skin vjs-big-play-centered"
-            controls
-            preload="auto"
-            width="640"
-            height="360"
-            data-setup='{"fluid": true, "playbackRates": [0.5, 1, 1.5, 2]}'
-        >
-            <source src="{{ video_url }}" type="video/mp4">
-            <source src="{{ video_url }}" type="video/webm">
-            <source src="{{ video_url }}" type="video/ogg">
-        </video>
-        
-        <script>
-            var player = videojs('my-video', {
-                controls: true,
-                autoplay: false,
-                preload: 'auto',
-                responsive: true,
-                fluid: true,
-                playbackRates: [0.5, 1, 1.5, 2],
-                html5: {
-                    hls: {
-                        overrideNative: true
-                    },
-                    nativeVideoTracks: false,
-                    nativeAudioTracks: false,
-                    nativeTextTracks: false
-                }
-            });
-        
-            player.on('error', function() {
-                console.error('Video.js error:', player.error());
-            });
-        </script>
+<div class="container py-5">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0"><i class="fas fa-check-circle me-2"></i>Processed Result</h3>
+        </div>
+        <div class="card-body">
+            {% if processing_status == 'completed' and file_url %}
+                {% if file_type == 'video' %}
+                <div class="ratio ratio-16x9 mb-4">
+                    <video
+                        id="my-video"
+                        class="video-js vjs-big-play-centered"
+                        controls
+                        preload="auto"
+                        data-setup='{"fluid": true, "playbackRates": [0.5, 1, 1.5, 2]}'
+                    >
+                        <source src="{{ file_url }}" type="video/mp4">
+                        <source src="{{ file_url }}" type="video/webm">
+                        <source src="{{ file_url }}" type="video/ogg">
+                    </video>
+                </div>
+                <script>
+                    var player = videojs('my-video', {
+                        controls: true,
+                        autoplay: false,
+                        preload: 'auto',
+                        responsive: true,
+                        fluid: true,
+                        playbackRates: [0.5, 1, 1.5, 2],
+                        html5: {
+                            hls: {
+                                overrideNative: true
+                            },
+                            nativeVideoTracks: false,
+                            nativeAudioTracks: false,
+                            nativeTextTracks: false
+                        }
+                    });
+                    player.on('error', function() {
+                        console.error('Video.js error:', player.error());
+                    });
+                </script>
+                {% else %}
+                <img src="{{ file_url }}" alt="Processed Image" class="img-fluid rounded mb-4">
+                {% endif %}
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('download_file', filename=filename) }}" class="btn btn-outline-primary btn-lg flex-grow-1 me-2">
+                        <i class="fas fa-download me-2"></i>Download Processed File
+                    </a>
+                    <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-lg flex-grow-1 ms-2">
+                        <i class="fas fa-arrow-left me-2"></i>Process Another File
+                    </a>
+                </div>
+            {% elif processing_status == 'processing' %}
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="lead mb-4">Your file is still being processed. Please wait or check back later.</p>
+                    <a href="{{ url_for('show_result', filename=filename) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </a>
+                </div>
             {% else %}
-            <img src="{{ video_url }}" alt="Processed Image" class="img-fluid mb-3">
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle text-danger mb-3" style="font-size: 3rem;"></i>
+                    <p class="lead mb-4">An error occurred while processing your file. Please try uploading it again.</p>
+                    <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Return to Upload
+                    </a>
+                </div>
             {% endif %}
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('download_file', filename=filename) }}" class="btn btn-secondary mb-2"><i class="fas fa-download"></i> Download Processed File</a>
-                <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Process Another File</a>
-            </div>
-        {% elif processing_status == 'processing' %}
-            <p class="alert alert-info">Your file is still being processed. Please wait or check back later.</p>
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('show_result', filename=filename) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary"><i class="fas fa-sync"></i> Refresh</a>
-            </div>
-        {% else %}
-            <p class="alert alert-danger">An error occurred while processing your file. Please try uploading it again.</p>
-            <div class="d-grid gap-2">
-                <a href="{{ url_for('upload_file') }}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Return to Upload</a>
-            </div>
-        {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
