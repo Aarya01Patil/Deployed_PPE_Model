@@ -3,28 +3,79 @@
 {% block title %}Upload - PPE Detection System{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <i class="fas fa-upload"></i> Upload an Image or Video
+<div class="container py-5">
+    <div class="row align-items-center">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold mb-4">Recognize Personal Protective Equipment with AI</h1>
+            <p class="lead mb-4">Upload an image or video to detect PPE in real-time on custom trained model on YOLOv8</p>
+        </div>
+        <div class="col-lg-6">
+            <img src="{{ url_for('static', filename='images/PPE_Detection.jpeg') }}" alt="PPE Detection" class="img-fluid rounded shadow-lg" style="max-height: 300px; object-fit: cover;">
+        </div>
     </div>
-    <div class="card-body">
-        <form method="post" enctype="multipart/form-data" id="upload-form">
-            <div class="mb-3">
-                <div id="drop-area" class="p-4 border border-2 border-dashed rounded">
-                    <p class="text-center mb-2">Drag & drop files here</p>
-                    <p class="text-center">or</p>
-                    <label for="file" class="form-label d-block text-center">
-                        <span class="btn btn-secondary">Choose an image or video file</span>
-                        <input class="d-none" type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.mp4,.avi,.mov">
-                    </label>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h2>Try Here</h2>
+        </div>
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Upload Your Image or Video</h5>
+                    <form method="post" enctype="multipart/form-data" id="upload-form">
+                        <div class="mb-3">
+                            <div id="drop-area" class="p-5 border border-2 border-dashed rounded text-center" style="min-height: 200px;">
+                                <p class="mb-3">Drag & drop files here</p>
+                                <p class="mb-3">or</p>
+                                <label for="file" class="btn btn-primary btn-lg">
+                                    Choose a file
+                                    <input class="d-none" type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.mp4,.avi,.mov">
+                                </label>
+                            </div>
+                        </div>
+                        <p class="text-muted fst-italic mb-3 small">Accepted formats: .png, .jpg, .jpeg, .mp4, .avi, .mov</p>
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="submit-btn">
+                            Upload and Process
+                        </button>
+                    </form>
                 </div>
-                <p class="text-muted mt-2">Accepted formats: .png, .jpg, .jpeg, .mp4, .avi, .mov</p>
             </div>
-            <button type="submit" class="btn btn-primary" id="submit-btn">
-                <i class="fas fa-upload"></i> Upload and Process
-            </button>
-        </form>
+        </div>
     </div>
+</div>
+
+<div class="container mt-5 text-center">
+    <h2 class="mb-4">How It Works</h2>
+    <p class="mb-5">
+        My PPE Detection System utilizes a custom-trained deep learning model to analyze images and videos. When you upload content, it's processed through our advanced neural network, which has been trained on hundreds of images featuring various types of personal protective equipment. The model identifies and localizes PPE items such as helmets, safety vests, gloves, and goggles with moderate accuracy. It can detect multiple items simultaneously, even in complex scenes with multiple people. The results are then overlaid on the original image or video, highlighting the detected PPE items for easy visualization and analysis.
+    </p>
+    <div class="row justify-content-center">
+        <div class="col-md-3">
+            <h5>1. Upload</h5>
+            <p>Upload an image or video containing people wearing PPE.</p>
+        </div>
+        <div class="col-md-3">
+            <h5>2. Process</h5>
+            <p>My AI model analyzes the content to detect PPE items.</p>
+        </div>
+        <div class="col-md-3">
+            <h5>3. Results</h5>
+            <p>View the detected PPE items highlighted in the image or video.</p>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5 mb-5 text-center">
+    <h2 class="mb-4">Contact Me</h2>
+    <p>Follow me on my social media channels:</p>
+    <ul class="list-inline">
+        <li class="list-inline-item"><a href="https://twitter.com/AaryaPatil16" target="_blank" class="text-dark"><i class="fab fa-twitter"></i> Twitter</a></li>
+        <li class="list-inline-item"><a href="https://linkedin.com/in/aarya-patil-252b45294" target="_blank" class="text-dark"><i class="fab fa-linkedin"></i> LinkedIn</a></li>
+        <li class="list-inline-item"><a href="https://github.com/Aarya01Patil" target="_blank" class="text-dark"><i class="fab fa-github"></i> GitHub</a></li>
+    </ul>
+    <p class="mt-3">For further inquiries, please email us at: <a href="mailto:aaryapatil402@gmail.com" class="text-dark">aaryapatil402@gmail.com</a></p>
 </div>
 {% endblock %}
 
@@ -35,10 +86,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submit-btn');
     const fileInput = document.getElementById('file');
     const dropArea = document.getElementById('drop-area');
+    const resultArea = document.getElementById('result-area');
+    const processing = document.getElementById('processing');
+    const resultContent = document.getElementById('result-content');
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
     });
 
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -79,16 +132,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     form.addEventListener('submit', function(e) {
+        e.preventDefault();
         const file = fileInput.files[0];
         if (file) {
             const validExtensions = ['.png', '.jpg', '.jpeg', '.mp4', '.avi', '.mov'];
             const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
             
             if (validExtensions.includes(fileExtension)) {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Please wait, processing...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
                 submitBtn.disabled = true;
+                resultArea.classList.remove('d-none');
+                processing.classList.remove('d-none');
+                resultContent.classList.add('d-none');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    processing.classList.add('d-none');
+                    resultContent.classList.remove('d-none');
+                    if (data.success) {
+                        resultContent.innerHTML = `<img src="${data.result_url}" alt="Processed Image" class="img-fluid">`;
+                    } else {
+                        resultContent.innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                    }
+                })
+                .catch(error => {
+                    processing.classList.add('d-none');
+                    resultContent.classList.remove('d-none');
+                    resultContent.innerHTML = `<p class="text-danger">Error: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    submitBtn.innerHTML = 'Upload and Process';
+                    submitBtn.disabled = false;
+                });
             } else {
-                e.preventDefault();
                 alert('Invalid file type. Please use .png, .jpg, .jpeg, .mp4, .avi, or .mov files.');
             }
         }

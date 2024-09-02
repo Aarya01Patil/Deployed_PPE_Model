@@ -145,7 +145,6 @@ def process_video(input_path, output_path):
         if frame_count == 0:
             raise ValueError("No frames were processed from the input video")
 
-        # Re-encode the video using FFmpeg
         ffmpeg_command = [
             'ffmpeg',
             '-i', temp_output,
