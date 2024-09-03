@@ -27,24 +27,36 @@ The dataset used for training contains images and annotations for the following 
 ## Project Structure
 
 ```
-project/
-│
-├── Datasets.zip
-│   ├── images/
-│   ├── annotations/
-│   └── classes.txt
-│
+/
+/
+├── .do/
+│   └── app.yaml
+├── app/
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── animated_background.css
+│   │   └── images/
+│   │       └── PPE_Detection.jpeg
+│   ├── templates/
+│   │   ├── base.html
+│   │   ├── index.html
+│   │   └── result.html
+│   ├── __init__.py
+│   └── views.py
 ├── scripts/
-│   ├── pascalVOC_to_yolo.py
-│   └── inference.py
-│
+│   ├── inference.py
+│   └── s3_cleanup.py
 ├── weights/
-│   ├── person_detection.pt
-│   └── ppe_detection.pt
-│
-├── app.py
+│   ├── person_detection/
+│   │   └── best.pt
+│   └── ppe_detection/
+│       └── best.pt
 ├── requirements.txt
-└── README.md
+└── run.py
+└── setup_ffmpeg.py
+└── Procfile
+└── Aptfile
+└── LICENSE
 ```
 
 ## Setup and Installation
@@ -66,28 +78,6 @@ project/
    pip install -r requirements.txt
    ```
 
-## Usage
-
-### Data Preparation
-
-To convert PascalVOC annotations to YOLOv8 format:
-
-```
-python scripts/pascalVOC_to_yolo.py --input_dir /path/to/input --output_dir /path/to/output
-```
-
-### Model Training
-
-Train the person detection and PPE detection models using the YOLOv8 framework. Refer to the [YOLOv8 documentation](https://docs.ultralytics.com/) for detailed instructions.
-
-### Inference
-
-To run inference on a directory of images:
-
-```
-python scripts/inference.py --input_dir /path/to/input_images --output_dir /path/to/output_images --person_det_model weights/person_detection.pt --ppe_detection_model weights/ppe_detection.pt
-```
-
 ## Deployment
 
 This project is deployed on DigitalOcean using Flask. The `app.py` file contains the Flask application that serves the model predictions.
@@ -95,27 +85,13 @@ This project is deployed on DigitalOcean using Flask. The `app.py` file contains
 To run the Flask app locally:
 
 ```
-python app.py
+python run.py
 ```
 
 For production deployment, consider using Gunicorn as the WSGI HTTP server:
 
 ```
-gunicorn app:app
-```
-
-## API Endpoints
-
-- `/predict`: POST endpoint that accepts an image file and returns the PPE detection results.
-
-Example usage:
-```python
-import requests
-
-url = "http://your-digitalocean-ip/predict"
-files = {"file": open("path/to/image.jpg", "rb")}
-response = requests.post(url, files=files)
-print(response.json())
+gunicorn run:app
 ```
 
 ## Performance and Evaluation
