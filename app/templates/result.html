@@ -6,15 +6,8 @@
 {{ super() }}
 <link href="https://vjs.zencdn.net/7.20.3/video-js.min.css" rel="stylesheet" />
 <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if ("{{ processing_status }}" === "processing") {
-            setInterval(function() {
-                window.location.reload();
-            }, 7000); 
-        }
-    });
-</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 {% endblock %}
 
 {% block content %}
@@ -77,7 +70,7 @@
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="lead mb-4">Your file is still being processed. Please wait or check back later.</p>
-                    <a href="{{ url_for('show_result', filename=filename) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary btn-lg">
+                    <a href="{{ url_for('show_result', filename=filename) }}?session_id={{ request.args.get('session_id') }}" class="btn btn-primary btn-lg btn-refresh">
                         <i class="fas fa-sync-alt me-2"></i>Refresh
                     </a>
                 </div>
@@ -93,4 +86,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    function reloadPage() {
+        location.reload();
+    }
+    $(document).ready(function() {
+        if ("{{ processing_status }}" === "processing") {
+            var reloadTime = "{{ file_type }}" === "video" ? 15000 : 5000;
+            setTimeout(reloadPage, reloadTime);
+        }
+    });
+</script>
 {% endblock %}
