@@ -122,7 +122,6 @@ def show_result(filename):
     if processing_status == 'completed':
         file_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov')) else 'image'
         file_url = generate_presigned_url(BUCKET_NAME, filename)
-        
         return render_template('result.html', file_url=file_url, processing_status=processing_status, file_type=file_type, filename=filename)
     elif processing_status == 'error':
         flash('An error occurred while processing the file', 'error')
