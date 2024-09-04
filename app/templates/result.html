@@ -6,6 +6,15 @@
 {{ super() }}
 <link href="https://vjs.zencdn.net/7.20.3/video-js.min.css" rel="stylesheet" />
 <script src="https://vjs.zencdn.net/7.20.3/video.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if ("{{ processing_status }}" === "processing") {
+            setInterval(function() {
+                window.location.reload();
+            }, 7000); 
+        }
+    });
+</script>
 {% endblock %}
 
 {% block content %}
@@ -52,7 +61,7 @@
                     });
                 </script>
                 {% else %}
-                <img src="{{ file_url }}" alt="Processed Image" class="img-fluid rounded mb-4">
+                <img src="{{ file_url }}" alt="Processed Image" class="img-fluid rounded mb-4 mx-auto d-block">
                 {% endif %}
                 <div class="d-flex justify-content-between">
                     <a href="{{ url_for('download_file', filename=filename) }}" class="btn btn-outline-primary btn-lg flex-grow-1 me-2">
