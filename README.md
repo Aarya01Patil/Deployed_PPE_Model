@@ -3,7 +3,8 @@
 This project implements a Personal Protective Equipment (PPE) detection model using YOLOv8, deployed with Flask on DigitalOcean.
 
 ## Website Preview
-![image](https://github.com/user-attachments/assets/0ebe396d-54e7-478c-b1c3-acbeed63db2c)
+![image](https://github.com/user-attachments/assets/c6093167-4405-48e0-8fcd-68b53c34ac24)
+
 
 ## Project Overview
 
